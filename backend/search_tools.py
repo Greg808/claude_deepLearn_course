@@ -1,3 +1,4 @@
+import json
 from typing import Dict, Any, Optional, Protocol
 from abc import ABC, abstractmethod
 from vector_store import VectorStore, SearchResults
@@ -112,6 +113,63 @@ class CourseSearchTool(Tool):
         self.last_sources = sources
         
         return "\n\n".join(formatted)
+
+
+class CourseOutlineTool(Tool):
+    """Tool for getting a course outline (title, link, lessons) from the course catalog"""
+
+    def __init__(self, vector_store: VectorStore):
+        self.store = vector_store
+        self.last_sources = []  # Track sources from last lookup
+
+    def get_tool_definition(self) -> Dict[str, Any]:
+        """Return Anthropic tool definition for this tool"""
+        return {
+            "name": "get_course_outline",
+            "description": "Get a course outline: course title, course link and the complete lesson list",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "course_name": {
+                        "type": "string",
+                        "description": "Course title (partial matches work, e.g. 'MCP', 'Introduction')"
+                    }
+                },
+                "required": ["course_name"]
+            }
+        }
+
+    def execute(self, course_name: str) -> str:
+        """
+        Execute the outline lookup for the best matching course.
+
+        Args:
+            course_name: Course title or part of it
+
+        Returns:
+            Formatted course outline or error message
+        """
+        course_title = self.store.find_course_title(course_name)
+        if not course_title:
+            return f"No course found matching '{course_name}'"
+
+        results = self.store.course_catalog.get(ids=[course_title])
+        if not results or not results.get('metadatas'):
+            return f"No outline found for course '{course_title}'"
+
+        metadata = results['metadatas'][0]
+        course_link = metadata.get('course_link')
+        lessons = json.loads(metadata.get('lessons_json', '[]'))
+
+        lines = [f"Course: {course_title}", f"Link: {course_link or 'n/a'}", "Lessons:"]
+        for lesson in lessons:
+            lines.append(f"- Lesson {lesson.get('lesson_number')}: {lesson.get('lesson_title')}")
+
+        # Track source for the UI
+        self.last_sources = [{"text": course_title, "url": course_link}]
+
+        return "\n".join(lines)
+
 
 class ToolManager:
     """Manages available tools for the AI"""

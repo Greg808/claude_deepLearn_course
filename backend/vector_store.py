@@ -1,3 +1,4 @@
+import re
 import chromadb
 from chromadb.config import Settings
 from typing import List, Dict, Any, Optional
@@ -78,7 +79,7 @@ class VectorStore:
         # Step 1: Resolve course name if provided
         course_title = None
         if course_name:
-            course_title = self._resolve_course_name(course_name)
+            course_title = self.find_course_title(course_name)
             if not course_title:
                 return SearchResults.empty(f"No course found matching '{course_name}'")
         
@@ -99,22 +100,31 @@ class VectorStore:
         except Exception as e:
             return SearchResults.empty(f"Search error: {str(e)}")
     
-    def _resolve_course_name(self, course_name: str) -> Optional[str]:
-        """Use vector search to find best matching course by name"""
+    # Nearest-title L2 distance up to which a semantic match is trusted (measured on all-MiniLM-L6-v2:
+    # real partial names <= 0.95, unrelated names >= 1.3). Beyond it, the name's words must be in the title.
+    COURSE_MATCH_MAX_DISTANCE = 1.1
+    NAME_FILLER_WORDS = {"course", "courses", "the", "a", "an", "of", "to", "for", "with", "and", "on", "in", "about"}
+
+    def find_course_title(self, course_name: str) -> Optional[str]:
+        """Resolve a course name to an exact title, or None if no course plausibly matches"""
         try:
-            results = self.course_catalog.query(
-                query_texts=[course_name],
-                n_results=1
-            )
-            
-            if results['documents'][0] and results['metadatas'][0]:
-                # Return the title (which is now the ID)
-                return results['metadatas'][0][0]['title']
+            results = self.course_catalog.query(query_texts=[course_name], n_results=1)
         except Exception as e:
             print(f"Error resolving course name: {e}")
-        
-        return None
-    
+            return None
+
+        if not results['metadatas'][0]:
+            return None
+
+        title = results['metadatas'][0][0]['title']
+        if results['distances'][0][0] <= self.COURSE_MATCH_MAX_DISTANCE:
+            return title
+
+        # Short names like "MCP" embed poorly; accept them only as words of the title
+        title_words = set(re.findall(r"\w+", title.lower()))
+        name_words = set(re.findall(r"\w+", course_name.lower())) - self.NAME_FILLER_WORDS
+        return title if name_words and name_words <= title_words else None
+
     def _build_filter(self, course_title: Optional[str], lesson_number: Optional[int]) -> Optional[Dict]:
         """Build ChromaDB filter from search parameters"""
         if not course_title and lesson_number is None:
