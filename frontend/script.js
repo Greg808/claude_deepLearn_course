@@ -122,10 +122,16 @@ function addMessage(content, type, sources = null, isWelcome = false) {
     let html = `<div class="message-content">${displayContent}</div>`;
     
     if (sources && sources.length > 0) {
+        // Several chunks often come from the same lesson; show each source once
+        const uniqueSources = [...new Map(sources.map(s => [s.text, s])).values()];
+        const sourceItems = uniqueSources.map(s => s.url
+            ? `<a class="source-item" href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(s.text)}<span class="source-icon" aria-hidden="true">↗</span></a>`
+            : `<span class="source-item">${escapeHtml(s.text)}</span>`
+        );
         html += `
             <details class="sources-collapsible">
-                <summary class="sources-header">Sources</summary>
-                <div class="sources-content">${sources.join(', ')}</div>
+                <summary class="sources-header">Sources (${uniqueSources.length})</summary>
+                <div class="sources-content">${sourceItems.join('')}</div>
             </details>
         `;
     }
