@@ -7,13 +7,27 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
+from contextlib import asynccontextmanager
 import os
 
 from config import config
 from rag_system import RAGSystem
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Load initial documents on startup"""
+    docs_path = "../docs"
+    if os.path.exists(docs_path):
+        print("Loading initial documents...")
+        try:
+            courses, chunks = rag_system.add_course_folder(docs_path, clear_existing=False)
+            print(f"Loaded {courses} courses with {chunks} chunks")
+        except Exception as e:
+            print(f"Error loading documents: {e}")
+    yield
+
 # Initialize FastAPI app
-app = FastAPI(title="Course Materials RAG System", root_path="")
+app = FastAPI(title="Course Materials RAG System", root_path="", lifespan=lifespan)
 
 # Add trusted host middleware for proxy
 app.add_middleware(
@@ -84,18 +98,6 @@ async def get_course_stats():
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.on_event("startup")
-async def startup_event():
-    """Load initial documents on startup"""
-    docs_path = "../docs"
-    if os.path.exists(docs_path):
-        print("Loading initial documents...")
-        try:
-            courses, chunks = rag_system.add_course_folder(docs_path, clear_existing=False)
-            print(f"Loaded {courses} courses with {chunks} chunks")
-        except Exception as e:
-            print(f"Error loading documents: {e}")
 
 # Custom static file handler with no-cache headers for development
 from fastapi.staticfiles import StaticFiles
