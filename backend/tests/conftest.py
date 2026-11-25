@@ -3,11 +3,10 @@ import dataclasses
 import os
 from pathlib import Path
 
-# Must run before any backend import: app.py resolves ../frontend from the cwd,
-# config.py calls load_dotenv() (which never overrides variables already set),
-# and the embedding model must come from the local cache only.
+# Must run before any backend import: config.py calls load_dotenv() (which never
+# overrides variables already set), and the embedding model must come from the
+# local cache only.
 BACKEND_DIR = Path(__file__).resolve().parents[1]
-os.chdir(BACKEND_DIR)
 os.environ["ANTHROPIC_API_KEY"] = "test-key-not-used"
 os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ["TRANSFORMERS_OFFLINE"] = "1"
@@ -168,6 +167,9 @@ def seeded_store(seeded_rag):
 @pytest.fixture(scope="session")
 def app_module(tmp_path_factory):
     """Import app.py lazily, with its import-time RAGSystem pointed at a temp store."""
+    # app.py resolves ../frontend from the cwd on every request, so this stays for
+    # the session. Not done at conftest import: pytest would then miss testpaths.
+    os.chdir(BACKEND_DIR)
     config.CHROMA_PATH = str(tmp_path_factory.mktemp("app_chroma"))
     import app
     return app
