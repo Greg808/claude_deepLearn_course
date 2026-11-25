@@ -149,3 +149,23 @@ def test_new_chat_discards_answer_still_in_flight(chat):
     expect(messages(chat)).to_have_count(1)
     expect(chat.locator("#chatInput")).to_be_enabled()
     assert len(held) == 1
+
+
+def test_theme_toggle_switches_and_persists(chat):
+    html = chat.locator("html")
+    toggle = chat.locator("#themeToggle")
+    expect(html).to_have_attribute("data-theme", "dark")
+    expect(toggle).to_have_attribute("aria-label", "Switch to light theme")
+
+    toggle.click()
+    expect(html).to_have_attribute("data-theme", "light")
+    expect(toggle).to_have_attribute("aria-label", "Switch to dark theme")
+    bg = chat.evaluate("getComputedStyle(document.body).getPropertyValue('--background').trim()")
+    assert bg == "#f1f5f9"
+
+    chat.reload()
+    expect(html).to_have_attribute("data-theme", "light")
+
+    toggle.focus()
+    chat.keyboard.press("Enter")
+    expect(html).to_have_attribute("data-theme", "dark")

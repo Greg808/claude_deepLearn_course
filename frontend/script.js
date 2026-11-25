@@ -18,10 +18,36 @@ document.addEventListener('DOMContentLoaded', () => {
     totalCourses = document.getElementById('totalCourses');
     courseTitles = document.getElementById('courseTitles');
     
+    setupThemeToggle();
     setupEventListeners();
     createNewSession();
     loadCourseStats();
 });
+
+// Theme toggle: dark is the default, light sets data-theme="light" on <html>
+function setupThemeToggle() {
+    const toggle = document.getElementById('themeToggle');
+    const root = document.documentElement;
+    let transitionTimer;
+
+    const syncLabel = () => {
+        const isLight = root.dataset.theme === 'light';
+        toggle.setAttribute('aria-label', isLight ? 'Switch to dark theme' : 'Switch to light theme');
+        toggle.title = toggle.getAttribute('aria-label');
+    };
+
+    toggle.addEventListener('click', () => {
+        const next = root.dataset.theme === 'light' ? 'dark' : 'light';
+        root.classList.add('theme-transition');
+        clearTimeout(transitionTimer);
+        transitionTimer = setTimeout(() => root.classList.remove('theme-transition'), 300);
+        root.dataset.theme = next;
+        try { localStorage.setItem('theme', next); } catch (e) {}
+        syncLabel();
+    });
+
+    syncLabel();
+}
 
 // Event Listeners
 function setupEventListeners() {
