@@ -18,7 +18,7 @@ cd backend && uv run uvicorn app:app --reload --port 8000   # same, manually
 
 - UI: http://localhost:8000, API docs: http://localhost:8000/docs
 - Tests: `uv run pytest` (all), `uv run pytest -m "not e2e"` (skip browser tests). Offline: Claude is faked, Chroma uses temp dirs, the embedding model must already be cached. E2e needs `uv run playwright install chromium` once. `xfail(strict=True)` tests mark known defects.
-- No linter or formatter is configured. `main.py` at the root is an unused stub.
+- Frontend formatting: Prettier (`npm install` once, then `scripts/frontend-quality.sh` to check, `--fix` to format). No Python linter or formatter is configured. `main.py` at the root is an unused stub.
 - Always run the server from `backend/`: `app.py` uses relative paths (`../docs`, `../frontend`, `./chroma_db`).
 
 ## Architecture

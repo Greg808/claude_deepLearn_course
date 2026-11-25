@@ -1,0 +1,11 @@
+{
+  "name": "ragchatbot-frontend-tooling",
+  "private": true,
+  "scripts": {
+    "format": "prettier --write frontend",
+    "format:check": "prettier --check frontend"
+  },
+  "devDependencies": {
+    "prettier": "3.10.1"
+  }
+}
