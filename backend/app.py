@@ -104,6 +104,12 @@ async def get_course_stats():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.delete("/api/session/{session_id}")
+async def delete_session(session_id: str):
+    """Delete a conversation session (idempotent)"""
+    rag_system.session_manager.delete_session(session_id)
+    return {"status": "ok"}
+
 # Custom static file handler with no-cache headers for development
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
